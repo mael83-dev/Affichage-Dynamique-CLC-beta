@@ -1,0 +1,1617 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Affiche dynamique CLC V1</title>
+    
+    <!-- IMPORTS WEB FONTS UNIVERSELS (Google Fonts avec display=swap & WOFF2) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Comic+Neue:ital,wght@0,400;0,700;1,400&family=Courier+Prime:ital,wght@0,400;0,700;1,400&family=Fredoka:wght@400;600;700&family=Inter:wght@400;600;700;900&family=League+Spartan:wght@400;600;700;900&family=Lobster&family=Montserrat:wght@400;700;900&family=Pacifico&family=Playfair+Display:ital,wght@0,700;1,700&family=Poppins:wght@400;600;700;900&family=Roboto:wght@400;700;900&display=swap" rel="stylesheet">
+    
+    <!-- WEBFONTS DÉDIÉES (OpenDyslexic & Gagalin) -->
+    <style>
+        @font-face {
+            font-family: 'Gagalin';
+            src: url('https://fonts.cdnfonts.com/s/16307/Gagalin-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+        @font-face {
+            font-family: 'OpenDyslexic';
+            src: url('https://cdn.jsdelivr.net/npm/open-dyslexic@1.0.3/woff/OpenDyslexic-Regular.woff') format('woff');
+            font-weight: normal;
+            font-style: normal;
+            font-display: swap;
+        }
+
+        :root {
+            --bg-image: url('https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1920&q=80');
+            --primary-color: #ffcc00;
+            --container-bg: rgba(0, 0, 0, 0.75);
+            --border-color: #ffcc00;
+            --progress-border-color: #ffcc00;
+            --progress-start-color: #4facfe;
+            --progress-end-color: #ff8008;
+
+            /* VISIBILITÉ ET COULEUR DES BORDURES */
+            --clock-border-style: solid;
+            --clock-bg-style: rgba(0, 0, 0, 0.75);
+            --main-border-style: solid;
+            --main-bg-style: rgba(0, 0, 0, 0.75);
+            --footer-border-style: solid;
+            --footer-bg-style: rgba(0, 0, 0, 0.75);
+            --progress-border-style: none;
+            --picto-border-style: solid;
+
+            /* POSITIONS EN X, Y ET LARGEUR */
+            --clock-x: 50%;
+            --clock-y: 12%;
+            --clock-w: auto;
+
+            --main-x: 50%;
+            --main-y: 50%;
+            --main-w: 80%;
+
+            --footer-x: 50%;
+            --footer-y: 88%;
+            --footer-w: 90%;
+
+            /* TAILLES ET POLICES */
+            --progress-bar-height: 80px;
+            --clock-font-size: 8rem;
+            --title-font-size: 3.5rem;
+            --desc-font-size: 2rem;
+            
+            --clock-text-color: #ffffff;
+            --day-text-color: #ffcc00;
+            --title-text-color: #ffcc00;
+            --desc-text-color: #ffffff;
+            --footer-text-color: #ffffff;
+            
+            --app-font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--app-font-family);
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden;
+            background: linear-gradient(rgba(0,0,0,0.4), rgba(0,0,0,0.4)), var(--bg-image) no-repeat center center fixed;
+            background-size: cover;
+            color: white;
+            position: relative;
+        }
+
+        /* BANDEAU DE PRÉVISUALISATION ACTIF */
+        .preview-banner {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: #e67e22;
+            color: white;
+            padding: 10px;
+            text-align: center;
+            font-weight: bold;
+            font-size: 1.1rem;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .preview-banner.active {
+            display: flex;
+        }
+
+        .btn-exit-preview {
+            background: #c0392b;
+            color: white;
+            border: none;
+            padding: 5px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        /* BOUTON CONFIGURATION DISCRET */
+        .btn-admin {
+            position: absolute;
+            top: 15px;
+            left: 15px;
+            z-index: 50;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            color: rgba(255, 255, 255, 0.8);
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            font-size: 1.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.3s ease;
+        }
+
+        .btn-admin:hover, .btn-admin:focus {
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            border-color: #fff;
+            transform: rotate(45deg);
+            outline: none;
+        }
+
+        /* HORLOGE ET CADRES AUTO-ADAPTATIFS */
+        header {
+            position: absolute;
+            left: var(--clock-x);
+            top: var(--clock-y);
+            transform: translate(-50%, -50%);
+            width: var(--clock-w);
+            min-width: max-content;
+            max-width: 95vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2;
+        }
+
+        .clock-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: var(--clock-bg-style);
+            padding: 15px 45px;
+            border-radius: 24px;
+            border: 5px var(--clock-border-style) var(--border-color);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.6);
+            backdrop-filter: blur(8px);
+            width: fit-content;
+            max-width: 100%;
+        }
+
+        /* HORLOGE FIXE A RENDER MONOSPACE PAR CHIFFRE POUR ANTI-DÉCALAGE ABSOLU */
+        .clock {
+            font-size: var(--clock-font-size);
+            font-weight: 900;
+            color: var(--clock-text-color);
+            text-shadow: 3px 3px 10px rgba(0,0,0,0.9);
+            line-height: 1.05;
+            white-space: nowrap;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-variant-numeric: tabular-nums lining-nums;
+            font-feature-settings: "tnum" 1, "lnum" 1;
+        }
+
+        /* Emplacement fixe par caractère pour qu'AUCUNE police ne décale l'horloge */
+        .clock-digit {
+            display: inline-block;
+            width: 0.62em;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .clock-colon {
+            display: inline-block;
+            width: 0.28em;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .day-indicator {
+            font-size: calc(var(--clock-font-size) * 0.22);
+            color: var(--day-text-color);
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-top: 5px;
+            text-align: center;
+            white-space: nowrap;
+        }
+
+        /* ZONE CENTRALE INFOS - ADAPTATIVE */
+        main {
+            position: absolute;
+            left: var(--main-x);
+            top: var(--main-y);
+            transform: translate(-50%, -50%);
+            width: var(--main-w);
+            max-width: 95vw;
+            min-height: fit-content;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            background: var(--main-bg-style);
+            border: 5px var(--main-border-style) var(--border-color);
+            padding: 25px 40px;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+            backdrop-filter: blur(10px);
+            z-index: 1;
+            overflow-wrap: break-word;
+        }
+
+        .picto-container {
+            width: 150px;
+            height: 150px;
+            margin-bottom: 15px;
+            background: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 15px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+            flex-shrink: 0;
+            border: 4px var(--picto-border-style) var(--border-color);
+            overflow: hidden;
+        }
+
+        .picto-container img {
+            max-width: 100%;
+            max-height: 100%;
+            object-fit: contain;
+        }
+
+        .activity-title {
+            font-size: var(--title-font-size);
+            font-weight: 800;
+            color: var(--title-text-color);
+            margin-bottom: 10px;
+            text-transform: uppercase;
+            text-shadow: 2px 2px 6px rgba(0,0,0,0.7);
+            word-break: break-word;
+        }
+
+        .activity-desc {
+            font-size: var(--desc-font-size);
+            color: var(--desc-text-color);
+            line-height: 1.35;
+            max-width: 100%;
+            word-break: break-word;
+        }
+
+        /* PIED DE PAGE JAUGE - ADAPTATIF */
+        footer {
+            position: absolute;
+            left: var(--footer-x);
+            top: var(--footer-y);
+            transform: translate(-50%, -50%);
+            width: var(--footer-w);
+            max-width: 98vw;
+            background: var(--footer-bg-style);
+            border: 5px var(--footer-border-style) var(--border-color);
+            padding: 20px 40px;
+            border-radius: 25px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 12px;
+            backdrop-filter: blur(10px);
+            z-index: 3;
+        }
+
+        .time-info {
+            display: flex;
+            justify-content: space-between;
+            font-size: clamp(1.4rem, 2.8vh, 2.2rem);
+            font-weight: 800;
+            color: var(--footer-text-color);
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.7);
+        }
+
+        .progress-bar-container {
+            width: 100%;
+            height: var(--progress-bar-height);
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 35px;
+            overflow: hidden;
+            border: 4px var(--progress-border-style) var(--progress-border-color);
+            position: relative;
+            box-shadow: inset 0 3px 10px rgba(0,0,0,0.6);
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--progress-start-color), var(--progress-end-color));
+            border-radius: 28px;
+            transition: width 1s linear;
+        }
+
+        /* MODAL ADMIN */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0,0,0,0.88);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 100;
+            padding: 20px;
+        }
+
+        .modal-overlay.active {
+            display: flex;
+        }
+
+        .modal-content {
+            background: #181826;
+            width: 95%;
+            max-width: 1250px;
+            max-height: 90vh;
+            border-radius: 20px;
+            padding: 30px;
+            overflow-y: auto;
+            color: #fff;
+            box-shadow: 0 10px 35px rgba(0,0,0,0.9);
+            border: 1px solid #444;
+            font-family: 'Segoe UI', sans-serif !important;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #444;
+            padding-bottom: 15px;
+        }
+
+        .modal-header h2 {
+            font-size: 2rem;
+            color: var(--primary-color);
+        }
+
+        .close-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+        }
+
+        .config-section {
+            background: #232336;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            border: 1px solid #3d3d5c;
+        }
+
+        .config-section h3 {
+            font-size: 1.3rem;
+            color: var(--primary-color);
+            margin-bottom: 15px;
+        }
+
+        .config-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 15px;
+        }
+
+        .field-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .field-group label {
+            font-size: 0.9rem;
+            color: #ddd;
+        }
+
+        .field-group input[type="color"] {
+            width: 100%;
+            height: 45px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            background: none;
+        }
+
+        .field-group select, .field-group input[type="range"], .field-group input[type="file"], .field-group input[type="date"] {
+            background: #12121c;
+            border: 1px solid #444;
+            color: white;
+            padding: 8px;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .range-value {
+            font-size: 0.85rem;
+            color: var(--primary-color);
+            text-align: right;
+        }
+
+        .tab-mode-selector {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .tab-mode-btn {
+            background: #12121c;
+            border: 2px solid #555;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            flex: 1;
+            text-align: center;
+        }
+
+        .tab-mode-btn.active {
+            background: var(--primary-color);
+            color: #000;
+            border-color: var(--primary-color);
+        }
+
+        .day-selector {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .day-btn {
+            background: #2a2a40;
+            border: 2px solid #555;
+            color: white;
+            padding: 10px 18px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1rem;
+            font-weight: bold;
+            transition: all 0.2s;
+        }
+
+        .day-btn.active {
+            background: var(--primary-color);
+            color: #000;
+            border-color: var(--primary-color);
+        }
+
+        .admin-item {
+            background: #2a2a40;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .admin-item.full-width {
+            grid-template-columns: 1fr;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .form-group label {
+            font-size: 0.9rem;
+            color: #aaa;
+        }
+
+        .form-group input, .form-group textarea {
+            background: #12121c;
+            border: 1px solid #444;
+            color: white;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+
+        .form-group textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .admin-actions {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 20px;
+            gap: 15px;
+        }
+
+        .btn-add {
+            background: #27ae60;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+        }
+
+        .btn-save {
+            background: var(--primary-color);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            flex: 2;
+        }
+
+        .btn-preview-mode {
+            background: #2980b9;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            flex: 1;
+        }
+        .btn-preview-mode:hover {
+            background: #3498db;
+        }
+
+        .btn-delete {
+            background: #c0392b;
+            color: white;
+            border: none;
+            padding: 8px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-top: 10px;
+            align-self: flex-start;
+        }
+
+        .file-upload-preview {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 5px;
+        }
+
+        .file-upload-preview img {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            object-fit: cover;
+            border: 1px solid #666;
+        }
+
+        .btn-test-sound {
+            background: #2980b9;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .range-picker-box {
+            display: grid;
+            grid-template-columns: 1fr 1fr auto;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 12px;
+            border: 1px solid #3d3d5c;
+        }
+
+        .btn-apply-range {
+            background: #8e44ad;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+            height: 45px;
+        }
+        .btn-apply-range:hover {
+            background: #9b59b6;
+        }
+
+        /* BANDEAU ET BOUTONS DE SÉCURITÉ DE SAUVEGARDE */
+        .backup-box {
+            background: #111e2e;
+            border: 1px solid #2980b9;
+            padding: 15px;
+            border-radius: 12px;
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .backup-buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-backup {
+            background: #34495e;
+            color: white;
+            border: 1px solid #5d6d7e;
+            padding: 8px 15px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .btn-backup:hover {
+            background: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- BANDEAU DE PRÉVISUALISATION -->
+    <div class="preview-banner" id="previewBanner">
+        <span>👁️ MODE PRÉVISUALISATION ACTIF — Affichage du créneau sélectionné dans l'administration</span>
+        <button class="btn-exit-preview" onclick="exitPreviewMode()">Quitter la prévisualisation</button>
+    </div>
+
+    <!-- BOUTON CONFIGURATION DISCRET -->
+    <button class="btn-admin" onclick="openAdmin()" title="Configuration">⚙️</button>
+
+    <!-- Horloge -->
+    <header>
+        <div class="clock-container">
+            <div class="clock" id="clock">
+                <!-- Structure d'emplacements fixes générée dynamiquement -->
+            </div>
+            <div class="day-indicator" id="day-indicator">Chargement...</div>
+        </div>
+    </header>
+
+    <!-- Zone d'informations -->
+    <main>
+        <div class="picto-container">
+            <img id="activity-picto" src="" alt="Pictogramme">
+        </div>
+        <div class="activity-title" id="activity-title">Chargement...</div>
+        <div class="activity-desc" id="activity-desc">Veuillez patienter pendant le chargement du planning.</div>
+    </main>
+
+    <!-- Jauge de temps -->
+    <footer>
+        <div class="time-info">
+            <span id="time-range">00:00 - 00:00</span>
+            <span id="time-remaining">Temps restant : --</span>
+        </div>
+        <div class="progress-bar-container">
+            <div class="progress-bar" id="progress-bar"></div>
+        </div>
+    </footer>
+
+    <!-- MODAL DE CONFIGURATION AVANCÉE -->
+    <div class="modal-overlay" id="adminModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Configuration Avancée, Couleurs & Polices</h2>
+                <button class="close-btn" onclick="closeAdmin()">Fermer ✖</button>
+            </div>
+
+            <!-- SECTION PERSONNALISATION DES COULEURS ET POLICES EXTENSIBLES -->
+            <div class="config-section">
+                <h3>🎨 Personnalisation des Couleurs & Polices</h3>
+                <div class="config-grid">
+                    <div class="field-group">
+                        <label>Police de caractères (12 Choix Web Unifiés)</label>
+                        <select id="selectFontFamily" onchange="updateDesignSettings()">
+                            <optgroup label="Nouveautés & Impact">
+                                <option value="'Gagalin', 'League Spartan', sans-serif">Gagalin (Titre BD / Fort Impact)</option>
+                                <option value="'League Spartan', sans-serif">League Spartan (Moderne / Titrage)</option>
+                            </optgroup>
+                            <optgroup label="Standard / Sans-Serif">
+                                <option value="'Segoe UI', Tahoma, Geneva, Verdana, sans-serif">Segoe UI / Standard</option>
+                                <option value="'Poppins', sans-serif">Poppins (Moderne & Ronde)</option>
+                                <option value="'Inter', sans-serif">Inter (Épuré & Lisible)</option>
+                                <option value="'Montserrat', sans-serif">Montserrat (Impactant)</option>
+                                <option value="'Roboto', sans-serif">Roboto</option>
+                            </optgroup>
+                            <optgroup label="Enfantin / Fun / Fantaisie">
+                                <option value="'Fredoka', cursive, sans-serif">Fredoka (Arrondie / Enfant)</option>
+                                <option value="'Comic Neue', cursive, sans-serif">Comic Neue (Ludique / BD)</option>
+                                <option value="'Lobster', cursive, sans-serif">Lobster (Calligraphie Titre)</option>
+                                <option value="'Pacifico', cursive, sans-serif">Pacifico (Manuscrit Joyeux)</option>
+                            </optgroup>
+                            <optgroup label="Accessibilité & Style">
+                                <option value="'OpenDyslexic', sans-serif">OpenDyslexic (Accessibilité DYS)</option>
+                                <option value="'Courier Prime', monospace">Courier Prime (Rétro / Machine)</option>
+                                <option value="'Playfair Display', serif">Playfair Display (Élégant / Serif)</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Couleur des Bordures / Accents</label>
+                        <input type="color" id="pickerBorder" onchange="updateDesignSettings()">
+                    </div>
+                    <div class="field-group">
+                        <label>Couleur Liseré Barre de Temps</label>
+                        <input type="color" id="pickerProgressBorder" onchange="updateDesignSettings()">
+                    </div>
+                    <div class="field-group">
+                        <label>Affichage Général des Bordures</label>
+                        <select id="selectBorderVisibility" onchange="updateDesignSettings()">
+                            <option value="visible">Bordures Colorées Visibles</option>
+                            <option value="none">Bordures Totalement Masquées / Invisibles</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Couleur de Fond des Blocs</label>
+                        <input type="color" id="pickerContainerBg" onchange="updateDesignSettings()">
+                    </div>
+                    <div class="field-group">
+                        <label>Couleur du Texte Horloge</label>
+                        <input type="color" id="pickerClockText" onchange="updateDesignSettings()">
+                    </div>
+                    <div class="field-group">
+                        <label>Couleur du Texte Jour</label>
+                        <input type="color" id="pickerDayText" onchange="updateDesignSettings()">
+                    </div>
+                    <div class="field-group">
+                        <label>Couleur des Titres d'Activité</label>
+                        <input type="color" id="pickerTitleText" onchange="updateDesignSettings()">
+                    </div>
+                    <div class="field-group">
+                        <label>Couleur du Texte Description</label>
+                        <input type="color" id="pickerDescText" onchange="updateDesignSettings()">
+                    </div>
+                    <div class="field-group">
+                        <label>Couleur du Texte Jauge / Bas</label>
+                        <input type="color" id="pickerFooterText" onchange="updateDesignSettings()">
+                    </div>
+                    <div class="field-group">
+                        <label>Dégradé Jauge (Couleur Début)</label>
+                        <input type="color" id="pickerProgressStart" onchange="updateDesignSettings()">
+                    </div>
+                    <div class="field-group">
+                        <label>Dégradé Jauge (Couleur Fin)</label>
+                        <input type="color" id="pickerProgressEnd" onchange="updateDesignSettings()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION REPERES ET POSITIONS LIBRES (AXES X / Y) -->
+            <div class="config-section">
+                <h3>📍 Repères & Positions Libres (Axes X / Y & Largeur)</h3>
+                
+                <h4 style="color: #4facfe; margin: 10px 0 5px 0;">⏰ HORLOGE NUMÉRIQUE</h4>
+                <div class="config-grid">
+                    <div class="field-group">
+                        <label>Position Horizontale X (%)</label>
+                        <input type="range" id="rangeClockX" min="5" max="95" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valClockX">50%</span>
+                    </div>
+                    <div class="field-group">
+                        <label>Position Verticale Y (%)</label>
+                        <input type="range" id="rangeClockY" min="5" max="95" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valClockY">12%</span>
+                    </div>
+                    <div class="field-group">
+                        <label>Largeur du Bloc (%)</label>
+                        <input type="range" id="rangeClockW" min="20" max="98" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valClockW">Auto</span>
+                    </div>
+                </div>
+
+                <h4 style="color: #4facfe; margin: 20px 0 5px 0;">🎯 ZONE CENTRALE (Titre, Picto & Description)</h4>
+                <div class="config-grid">
+                    <div class="field-group">
+                        <label>Position Horizontale X (%)</label>
+                        <input type="range" id="rangeMainX" min="5" max="95" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valMainX">50%</span>
+                    </div>
+                    <div class="field-group">
+                        <label>Position Verticale Y (%)</label>
+                        <input type="range" id="rangeMainY" min="5" max="95" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valMainY">50%</span>
+                    </div>
+                    <div class="field-group">
+                        <label>Largeur du Bloc (%)</label>
+                        <input type="range" id="rangeMainW" min="30" max="98" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valMainW">80%</span>
+                    </div>
+                </div>
+
+                <h4 style="color: #4facfe; margin: 20px 0 5px 0;">⏳ BARRE DE TEMPS ET JAUGE</h4>
+                <div class="config-grid">
+                    <div class="field-group">
+                        <label>Position Horizontale X (%)</label>
+                        <input type="range" id="rangeFooterX" min="5" max="95" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valFooterX">50%</span>
+                    </div>
+                    <div class="field-group">
+                        <label>Position Verticale Y (%)</label>
+                        <input type="range" id="rangeFooterY" min="5" max="95" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valFooterY">88%</span>
+                    </div>
+                    <div class="field-group">
+                        <label>Largeur du Bloc (%)</label>
+                        <input type="range" id="rangeFooterW" min="30" max="98" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valFooterW">90%</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION VISIBILITÉ DÉTAILLÉE DES CADRES ET FONDS -->
+            <div class="config-section">
+                <h3>🖼️ Affichage des Cadres & Fonds par Élément</h3>
+                <div class="config-grid">
+                    <div class="field-group">
+                        <label>Cadre Horloge</label>
+                        <select id="selectClockBorder" onchange="updateDesignSettings()">
+                            <option value="solid">Visible</option>
+                            <option value="none">Masqué / Invisible</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Fond Horloge</label>
+                        <select id="selectClockBg" onchange="updateDesignSettings()">
+                            <option value="show">Visible (Ombragé)</option>
+                            <option value="hide">Transparent / Masqué</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Cadre Zone Centrale</label>
+                        <select id="selectMainBorder" onchange="updateDesignSettings()">
+                            <option value="solid">Visible</option>
+                            <option value="none">Masqué / Invisible</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Fond Zone Centrale</label>
+                        <select id="selectMainBg" onchange="updateDesignSettings()">
+                            <option value="show">Visible (Ombragé)</option>
+                            <option value="hide">Transparent / Masqué</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Cadre Zone Jauge (Extérieur)</label>
+                        <select id="selectFooterBorder" onchange="updateDesignSettings()">
+                            <option value="solid">Visible</option>
+                            <option value="none">Masqué / Invisible</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Fond Zone Jauge</label>
+                        <select id="selectFooterBg" onchange="updateDesignSettings()">
+                            <option value="show">Visible (Ombragé)</option>
+                            <option value="hide">Transparent / Masqué</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Liseré autour de la Barre de Temps</label>
+                        <select id="selectProgressBarBorder" onchange="updateDesignSettings()">
+                            <option value="none">🚫 Sans Liseré (Supprimé)</option>
+                            <option value="solid">Bordure Visible</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION TAILLES ET TEXTES -->
+            <div class="config-section">
+                <h3>📐 Tailles des Textes et Épaisseurs</h3>
+                <div class="config-grid">
+                    <div class="field-group">
+                        <label>Taille Texte Horloge</label>
+                        <input type="range" id="rangeClockFont" min="3" max="25" step="0.5" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valClockFont">8rem</span>
+                    </div>
+                    <div class="field-group">
+                        <label>Épaisseur Barre de Temps (px)</label>
+                        <input type="range" id="rangeProgressBarH" min="20" max="250" step="5" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valProgressBarH">80px</span>
+                    </div>
+                    <div class="field-group">
+                        <label>Taille Titre Activité</label>
+                        <input type="range" id="rangeTitleFont" min="1.5" max="8" step="0.2" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valTitleFont">3.5rem</span>
+                    </div>
+                    <div class="field-group">
+                        <label>Taille Description</label>
+                        <input type="range" id="rangeDescFont" min="1" max="5" step="0.1" oninput="updateDesignSettings()">
+                        <span class="range-value" id="valDescFont">2rem</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION SONORE -->
+            <div class="config-section">
+                <h3>🔔 Signal Sonore de Transition</h3>
+                <div class="config-grid">
+                    <div class="field-group">
+                        <label>Activer le son aux transitions</label>
+                        <select id="soundEnabledSelect" onchange="updateDesignSettings()">
+                            <option value="true">Oui (Activer)</option>
+                            <option value="false">Non (Silencieux)</option>
+                        </select>
+                    </div>
+                    <div class="field-group">
+                        <label>Fichier Audio (MP3, WAV...)</label>
+                        <input type="file" id="soundFileInput" accept="audio/*" onchange="handleSoundUpload(event)">
+                    </div>
+                    <div class="field-group" style="justify-content: flex-end;">
+                        <button class="btn-test-sound" onclick="playTransitionSound()">🔊 Tester le son</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION PLANNING : HEBDOMADAIRE ET CALENDRIER ANNUEL -->
+            <div class="config-section">
+                <h3>📅 Gestion des Plannings (Hebdomadaire & Vacances)</h3>
+                
+                <div class="tab-mode-selector">
+                    <button class="tab-mode-btn active" id="btnModeWeekly" onclick="switchScheduleMode('weekly')">🗓️ Semaine Type (Scolaire)</button>
+                    <button class="tab-mode-btn" id="btnModeCustom" onclick="switchScheduleMode('custom')">📆 Jours & Plages de Vacances</button>
+                </div>
+
+                <!-- MODE HEBDOMADAIRE -->
+                <div id="sectionWeeklySchedule">
+                    <div class="day-selector">
+                        <button class="day-btn active" onclick="switchAdminDay(1, event)">Lundi</button>
+                        <button class="day-btn" onclick="switchAdminDay(2, event)">Mardi</button>
+                        <button class="day-btn" onclick="switchAdminDay(3, event)">Mercredi</button>
+                        <button class="day-btn" onclick="switchAdminDay(4, event)">Jeudi</button>
+                        <button class="day-btn" onclick="switchAdminDay(5, event)">Vendredi</button>
+                        <button class="day-btn" onclick="switchAdminDay(6, event)">Samedi</button>
+                        <button class="day-btn" onclick="switchAdminDay(0, event)">Dimanche</button>
+                    </div>
+                    <div id="weeklyScheduleForm"></div>
+                    <button class="btn-add" onclick="addWeeklySlot()">+ Ajouter un créneau à ce jour type</button>
+                </div>
+
+                <!-- MODE CALENDRIER & PLAGES DE VACANCES -->
+                <div id="sectionCustomSchedule" style="display: none;">
+                    
+                    <div class="range-picker-box">
+                        <div class="field-group">
+                            <label style="font-weight: bold; color: var(--primary-color);">Date de Début (Vacances) :</label>
+                            <input type="date" id="rangeStartDate">
+                        </div>
+                        <div class="field-group">
+                            <label style="font-weight: bold; color: var(--primary-color);">Date de Fin (Vacances) :</label>
+                            <input type="date" id="rangeEndDate">
+                        </div>
+                        <button class="btn-apply-range" onclick="applyRangeToVacation()">⚡ Appliquer à toute la plage</button>
+                    </div>
+
+                    <div class="custom-date-header">
+                        <div class="field-group" style="flex: 1;">
+                            <label style="font-weight: bold; color: var(--primary-color);">Ou cibler une Date Précise :</label>
+                            <input type="date" id="calendarDatePicker" onchange="onCalendarDateChange()">
+                        </div>
+                        <button class="btn-delete" style="margin-top: 20px;" onclick="deleteCustomDateSchedule()">🗑️ Supprimer la date</button>
+                    </div>
+
+                    <p style="font-size: 0.9rem; color: #aaa; margin: 15px 0;">
+                        💡 <strong>Astuce :</strong> Chaque créneau dispose d'un bouton <strong>👁️ Prévisualiser</strong> pour voir instantanément le résultat sur l'écran principal sans attendre l'horaire.
+                    </p>
+                    <div id="customScheduleForm"></div>
+                    <button class="btn-add" onclick="addCustomSlot()">+ Ajouter un créneau pour cette date</button>
+                </div>
+            </div>
+
+            <!-- SECTION SÉCURITÉ DE SAUVEGARDE & EXPORT -->
+            <div class="config-section">
+                <h3>💾 Sécurité de la Sauvegarde & Exportation</h3>
+                <div class="backup-box">
+                    <p style="font-size: 0.95rem; color: #ccc;">
+                        ✅ <strong>Sauvegarde Automatique Réseau/Navigateur :</strong> Dès que vous cliquez sur <em>« 💾 Enregistrer »</em>, vos données sont conservées de manière permanente dans la mémoire locale (LocalStorage) de votre navigateur. Même si vous fermez le navigateur ou redémarrez l'ordinateur/l'écran, votre planning reste enregistré.
+                    </p>
+                    <p style="font-size: 0.95rem; color: #ccc;">
+                        📦 <strong>Sauvegarde Externe & Transfert (Optionnel) :</strong> Vous pouvez exporter votre configuration complète dans un fichier de sauvegarde JSON pour l'utiliser sur un autre ordinateur ou écran d'affichage.
+                    </p>
+                    <div class="backup-buttons">
+                        <button class="btn-backup" onclick="exportDataBackup()">📥 Exporter la sauvegarde (.json)</button>
+                        <button class="btn-backup" onclick="document.getElementById('importBackupInput').click()">📤 Importer une sauvegarde</button>
+                        <input type="file" id="importBackupInput" accept=".json" style="display: none;" onchange="importDataBackup(event)">
+                    </div>
+                </div>
+            </div>
+
+            <div class="admin-actions">
+                <button class="btn-preview-mode" onclick="previewCurrentEditedSlot()">👁️ Prévisualiser ce créneau</button>
+                <button class="btn-save" onclick="saveSchedule()">💾 Enregistrer</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const defaultWeeklySchedules = {
+            1: [
+                { start: "08:00", end: "09:30", title: "Accueil Périscolaire Lundi", desc: "Jeux calmes et dessins libres.", picto: "https://img.icons8.com/color/96/children.png", bg: "https://images.unsplash.com/photo-1472162072942-cd5147eb3902?auto=format&fit=crop&w=1920&q=80" },
+                { start: "09:30", end: "17:00", title: "Temps Scolaire", desc: "Activités d'école.", picto: "https://img.icons8.com/color/96/school.png", bg: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1920&q=80" }
+            ],
+            2: [
+                { start: "08:00", end: "09:30", title: "Accueil Périscolaire Mardi", desc: "Accueil et rituels du matin.", picto: "https://img.icons8.com/color/96/children.png", bg: "https://images.unsplash.com/photo-1472162072942-cd5147eb3902?auto=format&fit=crop&w=1920&q=80" },
+                { start: "09:30", end: "17:00", title: "Temps Scolaire", desc: "Activités d'école.", picto: "https://img.icons8.com/color/96/school.png", bg: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1920&q=80" }
+            ],
+            3: [
+                { start: "08:00", end: "17:00", title: "Mercredi Loisirs", desc: "Ateliers créatifs et grands jeux d'équipe.", picto: "https://img.icons8.com/color/96/paint-palette.png", bg: "https://images.unsplash.com/photo-1513364776144-60967b0f800f?auto=format&fit=crop&w=1920&q=80" }
+            ],
+            4: [
+                { start: "08:00", end: "17:00", title: "Temps Scolaire Jeudi", desc: "Journée de classe.", picto: "https://img.icons8.com/color/96/school.png", bg: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1920&q=80" }
+            ],
+            5: [
+                { start: "08:00", end: "17:00", title: "Temps Scolaire Vendredi", desc: "Fin de semaine d'école.", picto: "https://img.icons8.com/color/96/school.png", bg: "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1920&q=80" }
+            ],
+            6: [
+                { start: "08:00", end: "18:00", title: "Centre Fermé", desc: "Bon week-end !", picto: "https://img.icons8.com/color/96/clock.png", bg: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1920&q=80" }
+            ],
+            0: [
+                { start: "08:00", end: "18:00", title: "Centre Fermé", desc: "Bon week-end !", picto: "https://img.icons8.com/color/96/clock.png", bg: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1920&q=80" }
+            ]
+        };
+
+        const defaultCustomDateSchedules = {
+            "2026-02-16": [
+                { start: "08:00", end: "10:00", title: "Accueil Vacances de Février", desc: "Petit déjeuner et jeux de société.", picto: "https://img.icons8.com/color/96/sun.png", bg: "https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=1920&q=80" },
+                { start: "10:00", end: "12:00", title: "Grand Tournoi des Vacances", desc: "Olympiades en équipes !", picto: "https://img.icons8.com/color/96/trophy.png", bg: "https://images.unsplash.com/photo-1527529482837-4698179dc6ce?auto=format&fit=crop&w=1920&q=80" }
+            ]
+        };
+
+        const defaultDesign = {
+            fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
+            clockX: "50", clockY: "12", clockW: "60",
+            mainX: "50", mainY: "50", mainW: "80",
+            footerX: "50", footerY: "88", footerW: "90",
+            progressBarHeight: "80", clockFont: "8", titleFont: "3.5", descFont: "2",
+            borderVisibility: "visible",
+            progressBarBorder: "none",
+            progressBorderColor: "#ffcc00",
+            clockBorder: "solid", clockBg: "show",
+            mainBorder: "solid", mainBg: "show",
+            footerBorder: "solid", footerBg: "show",
+            border: "#ffcc00", containerBg: "#000000",
+            clockText: "#ffffff", dayText: "#ffcc00", titleText: "#ffcc00", descText: "#ffffff", footerText: "#ffffff",
+            progressStart: "#4facfe", progressEnd: "#ff8008",
+            soundEnabled: "true", customSoundData: ""
+        };
+
+        let weeklySchedules = JSON.parse(localStorage.getItem('centre_weekly_schedules')) || defaultWeeklySchedules;
+        let customDateSchedules = JSON.parse(localStorage.getItem('centre_custom_date_schedules')) || defaultCustomDateSchedules;
+        let currentDesign = JSON.parse(localStorage.getItem('centre_design_clc_v1')) || JSON.parse(localStorage.getItem('centre_design_xy_v8')) || defaultDesign;
+        
+        let currentAdminDay = 1;
+        let selectedCalendarDate = new Date().toISOString().split('T')[0];
+        let currentScheduleMode = 'weekly';
+        let previousActivityTitle = "";
+        let previewSlotOverride = null;
+
+        // RENDU DE L'HORLOGE A CELLULES FIXES (PAR CHIFFRE / SEPARATEUR)
+        function setClockText(timeStr) {
+            const clockEl = document.getElementById('clock');
+            if (!clockEl) return;
+            
+            // Si le nombre de cellules ne correspond pas, réinitialiser la structure HTML
+            if (clockEl.children.length !== timeStr.length) {
+                clockEl.innerHTML = '';
+                for (let i = 0; i < timeStr.length; i++) {
+                    const char = timeStr[i];
+                    const span = document.createElement('span');
+                    if (char === ':') {
+                        span.className = 'clock-colon';
+                        span.textContent = ':';
+                    } else {
+                        span.className = 'clock-digit';
+                        span.textContent = char;
+                    }
+                    clockEl.appendChild(span);
+                }
+            } else {
+                for (let i = 0; i < timeStr.length; i++) {
+                    if (clockEl.children[i].textContent !== timeStr[i]) {
+                        clockEl.children[i].textContent = timeStr[i];
+                    }
+                }
+            }
+        }
+
+        function applyDesign() {
+            document.documentElement.style.setProperty('--app-font-family', currentDesign.fontFamily);
+            document.documentElement.style.setProperty('--clock-x', `${currentDesign.clockX}%`);
+            document.documentElement.style.setProperty('--clock-y', `${currentDesign.clockY}%`);
+            
+            let clockWidthVal = currentDesign.clockW && currentDesign.clockW !== "60" ? `${currentDesign.clockW}%` : 'auto';
+            document.documentElement.style.setProperty('--clock-w', clockWidthVal);
+            
+            document.documentElement.style.setProperty('--main-x', `${currentDesign.mainX}%`);
+            document.documentElement.style.setProperty('--main-y', `${currentDesign.mainY}%`);
+            document.documentElement.style.setProperty('--main-w', `${currentDesign.mainW}%`);
+            document.documentElement.style.setProperty('--footer-x', `${currentDesign.footerX}%`);
+            document.documentElement.style.setProperty('--footer-y', `${currentDesign.footerY}%`);
+            document.documentElement.style.setProperty('--footer-w', `${currentDesign.footerW}%`);
+            document.documentElement.style.setProperty('--progress-bar-height', `${currentDesign.progressBarHeight}px`);
+            document.documentElement.style.setProperty('--clock-font-size', `${currentDesign.clockFont}rem`);
+            document.documentElement.style.setProperty('--title-font-size', `${currentDesign.titleFont}rem`);
+            document.documentElement.style.setProperty('--desc-font-size', `${currentDesign.descFont}rem`);
+
+            let isGlobalBorderVisible = (currentDesign.borderVisibility !== "none");
+            let borderColor = isGlobalBorderVisible ? currentDesign.border : "transparent";
+
+            document.documentElement.style.setProperty('--border-color', borderColor);
+            document.documentElement.style.setProperty('--progress-border-color', currentDesign.progressBorderColor || currentDesign.border || "#ffcc00");
+            document.documentElement.style.setProperty('--clock-border-style', currentDesign.clockBorder);
+            document.documentElement.style.setProperty('--main-border-style', currentDesign.mainBorder);
+            document.documentElement.style.setProperty('--footer-border-style', currentDesign.footerBorder);
+            document.documentElement.style.setProperty('--progress-border-style', currentDesign.progressBarBorder || "none");
+            document.documentElement.style.setProperty('--picto-border-style', isGlobalBorderVisible ? "solid" : "none");
+
+            let hexBg = currentDesign.containerBg || '#000000';
+            let r = parseInt(hexBg.substr(1,2),16), g = parseInt(hexBg.substr(3,2),16), b = parseInt(hexBg.substr(5,2),16);
+            let rgbaVal = `rgba(${r}, ${g}, ${b}, 0.75)`;
+
+            document.documentElement.style.setProperty('--clock-bg-style', currentDesign.clockBg === 'hide' ? 'transparent' : rgbaVal);
+            document.documentElement.style.setProperty('--main-bg-style', currentDesign.mainBg === 'hide' ? 'transparent' : rgbaVal);
+            document.documentElement.style.setProperty('--footer-bg-style', currentDesign.footerBg === 'hide' ? 'transparent' : rgbaVal);
+
+            document.documentElement.style.setProperty('--clock-text-color', currentDesign.clockText);
+            document.documentElement.style.setProperty('--day-text-color', currentDesign.dayText);
+            document.documentElement.style.setProperty('--title-text-color', currentDesign.titleText);
+            document.documentElement.style.setProperty('--desc-text-color', currentDesign.descText);
+            document.documentElement.style.setProperty('--footer-text-color', currentDesign.footerText);
+            document.documentElement.style.setProperty('--primary-color', currentDesign.titleText);
+            document.documentElement.style.setProperty('--progress-start-color', currentDesign.progressStart);
+            document.documentElement.style.setProperty('--progress-end-color', currentDesign.progressEnd);
+
+            const fontSelect = document.getElementById('selectFontFamily');
+            if(fontSelect) fontSelect.value = currentDesign.fontFamily;
+
+            const borderVisSelect = document.getElementById('selectBorderVisibility');
+            if(borderVisSelect) borderVisSelect.value = currentDesign.borderVisibility || "visible";
+
+            const progressBorderSelect = document.getElementById('selectProgressBarBorder');
+            if(progressBorderSelect) progressBorderSelect.value = currentDesign.progressBarBorder || "none";
+
+            const pickers = {
+                'pickerBorder': currentDesign.border,
+                'pickerProgressBorder': currentDesign.progressBorderColor || currentDesign.border || "#ffcc00",
+                'pickerContainerBg': currentDesign.containerBg,
+                'pickerClockText': currentDesign.clockText,
+                'pickerDayText': currentDesign.dayText,
+                'pickerTitleText': currentDesign.titleText,
+                'pickerDescText': currentDesign.descText,
+                'pickerFooterText': currentDesign.footerText,
+                'pickerProgressStart': currentDesign.progressStart,
+                'pickerProgressEnd': currentDesign.progressEnd
+            };
+            for(let id in pickers) {
+                const el = document.getElementById(id);
+                if(el) el.value = pickers[id];
+            }
+
+            ['ClockX', 'ClockY', 'ClockW', 'MainX', 'MainY', 'MainW', 'FooterX', 'FooterY', 'FooterW'].forEach(id => {
+                const el = document.getElementById(`range${id}`);
+                if(el) {
+                    el.value = currentDesign[id.charAt(0).toLowerCase() + id.slice(1)];
+                    document.getElementById(`val${id}`).textContent = `${el.value}%`;
+                }
+            });
+            document.getElementById('rangeProgressBarH').value = currentDesign.progressBarHeight;
+            document.getElementById('valProgressBarH').textContent = `${currentDesign.progressBarHeight}px`;
+            document.getElementById('rangeClockFont').value = currentDesign.clockFont;
+            document.getElementById('valClockFont').textContent = `${currentDesign.clockFont}rem`;
+            document.getElementById('rangeTitleFont').value = currentDesign.titleFont;
+            document.getElementById('valTitleFont').textContent = `${currentDesign.titleFont}rem`;
+            document.getElementById('rangeDescFont').value = currentDesign.descFont;
+            document.getElementById('valDescFont').textContent = `${currentDesign.descFont}rem`;
+            document.getElementById('soundEnabledSelect').value = currentDesign.soundEnabled || "true";
+        }
+
+        function updateDesignSettings() {
+            currentDesign.fontFamily = document.getElementById('selectFontFamily').value;
+            currentDesign.border = document.getElementById('pickerBorder').value;
+            currentDesign.progressBorderColor = document.getElementById('pickerProgressBorder').value;
+            currentDesign.borderVisibility = document.getElementById('selectBorderVisibility').value;
+            currentDesign.progressBarBorder = document.getElementById('selectProgressBarBorder').value;
+            currentDesign.containerBg = document.getElementById('pickerContainerBg').value;
+            currentDesign.clockText = document.getElementById('pickerClockText').value;
+            currentDesign.dayText = document.getElementById('pickerDayText').value;
+            currentDesign.titleText = document.getElementById('pickerTitleText').value;
+            currentDesign.descText = document.getElementById('pickerDescText').value;
+            currentDesign.footerText = document.getElementById('pickerFooterText').value;
+            currentDesign.progressStart = document.getElementById('pickerProgressStart').value;
+            currentDesign.progressEnd = document.getElementById('pickerProgressEnd').value;
+            currentDesign.soundEnabled = document.getElementById('soundEnabledSelect').value;
+
+            ['ClockX', 'ClockY', 'ClockW', 'MainX', 'MainY', 'MainW', 'FooterX', 'FooterY', 'FooterW'].forEach(id => {
+                currentDesign[id.charAt(0).toLowerCase() + id.slice(1)] = document.getElementById(`range${id}`).value;
+            });
+            currentDesign.clockBorder = document.getElementById('selectClockBorder').value;
+            currentDesign.clockBg = document.getElementById('selectClockBg').value;
+            currentDesign.mainBorder = document.getElementById('selectMainBorder').value;
+            currentDesign.mainBg = document.getElementById('selectMainBg').value;
+            currentDesign.footerBorder = document.getElementById('selectFooterBorder').value;
+            currentDesign.footerBg = document.getElementById('selectFooterBg').value;
+            currentDesign.progressBarHeight = document.getElementById('rangeProgressBarH').value;
+            currentDesign.clockFont = document.getElementById('rangeClockFont').value;
+            currentDesign.titleFont = document.getElementById('rangeTitleFont').value;
+            currentDesign.descFont = document.getElementById('rangeDescFont').value;
+            applyDesign();
+        }
+
+        function switchScheduleMode(mode) {
+            currentScheduleMode = mode;
+            document.getElementById('btnModeWeekly').classList.toggle('active', mode === 'weekly');
+            document.getElementById('btnModeCustom').classList.toggle('active', mode === 'custom');
+            document.getElementById('sectionWeeklySchedule').style.display = mode === 'weekly' ? 'block' : 'none';
+            document.getElementById('sectionCustomSchedule').style.display = mode === 'custom' ? 'block' : 'none';
+            if (mode === 'custom') {
+                document.getElementById('calendarDatePicker').value = selectedCalendarDate;
+                renderCustomDateForm();
+            } else {
+                renderWeeklyForm();
+            }
+        }
+
+        function onCalendarDateChange() {
+            selectedCalendarDate = document.getElementById('calendarDatePicker').value;
+            renderCustomDateForm();
+        }
+
+        function applyRangeToVacation() {
+            const startStr = document.getElementById('rangeStartDate').value;
+            const endStr = document.getElementById('rangeEndDate').value;
+            if (!startStr || !endStr) {
+                alert("Veuillez sélectionner une date de début et une date de fin.");
+                return;
+            }
+            let startDate = new Date(startStr), endDate = new Date(endStr);
+            if (startDate > endDate) {
+                alert("La date de début doit être antérieure ou égale à la date de fin.");
+                return;
+            }
+            let sourceSlots = customDateSchedules[selectedCalendarDate];
+            if (!sourceSlots || sourceSlots.length === 0) {
+                sourceSlots = [{ start: "08:00", end: "17:00", title: "Activité Vacances", desc: "Programme de la journée.", picto: "https://img.icons8.com/color/96/sun.png", bg: "https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=1920&q=80" }];
+            }
+            let count = 0, curr = new Date(startDate);
+            while (curr <= endDate) {
+                let y = curr.getFullYear(), m = String(curr.getMonth() + 1).padStart(2, '0'), d = String(curr.getDate()).padStart(2, '0');
+                customDateSchedules[`${y}-${m}-${d}`] = JSON.parse(JSON.stringify(sourceSlots));
+                count++;
+                curr.setDate(curr.getDate() + 1);
+            }
+            alert(`Succès ! Appliqué à ${count} jours.`);
+            renderCustomDateForm();
+        }
+
+        function renderWeeklyForm() {
+            const container = document.getElementById('weeklyScheduleForm');
+            container.innerHTML = '';
+            (weeklySchedules[currentAdminDay] || []).forEach((item, index) => {
+                container.appendChild(createSlotFormItem(item, 'weekly', currentAdminDay, index));
+            });
+        }
+
+        function renderCustomDateForm() {
+            const container = document.getElementById('customScheduleForm');
+            container.innerHTML = '';
+            if (!customDateSchedules[selectedCalendarDate]) {
+                container.innerHTML = `<p style="padding: 15px; color: #aaa; text-align: center;">Aucun planning spécifique pour le <strong>${selectedCalendarDate}</strong>.</p>`;
+                return;
+            }
+            customDateSchedules[selectedCalendarDate].forEach((item, index) => {
+                container.appendChild(createSlotFormItem(item, 'custom', selectedCalendarDate, index));
+            });
+        }
+
+        function createSlotFormItem(item, mode, key, index) {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'admin-item';
+            itemEl.innerHTML = `
+                <div class="form-group">
+                    <label>Heure de début</label>
+                    <input type="time" value="${item.start}" onchange="updateSlotProp('${mode}', '${key}', ${index}, 'start', this.value)">
+                </div>
+                <div class="form-group">
+                    <label>Heure de fin</label>
+                    <input type="time" value="${item.end}" onchange="updateSlotProp('${mode}', '${key}', ${index}, 'end', this.value)">
+                </div>
+                <div class="form-group">
+                    <label>Titre</label>
+                    <input type="text" value="${item.title}" onchange="updateSlotProp('${mode}', '${key}', ${index}, 'title', this.value)">
+                </div>
+                <div class="form-group">
+                    <label>Pictogramme</label>
+                    <input type="text" value="${item.picto.startsWith('data:') ? '[Fichier importé]' : item.picto}" onchange="if(!this.value.startsWith('[Fichier')) updateSlotProp('${mode}', '${key}', ${index}, 'picto', this.value)">
+                    <div class="file-upload-preview">
+                        <input type="file" accept="image/*" onchange="handleImageUpload(event, '${mode}', '${key}', ${index}, 'picto')">
+                        ${item.picto ? `<img src="${item.picto}">` : ''}
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label>Image de Fond</label>
+                    <input type="text" value="${item.bg.startsWith('data:') ? '[Fichier importé]' : item.bg}" onchange="if(!this.value.startsWith('[Fichier')) updateSlotProp('${mode}', '${key}', ${index}, 'bg', this.value)">
+                    <div class="file-upload-preview">
+                        <input type="file" accept="image/*" onchange="handleImageUpload(event, '${mode}', '${key}', ${index}, 'bg')">
+                    </div>
+                </div>
+                <div class="form-group full-width">
+                    <label>Description</label>
+                    <textarea onchange="updateSlotProp('${mode}', '${key}', ${index}, 'desc', this.value)">${item.desc}</textarea>
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                        <button class="btn-delete" style="margin-top:0;" onclick="deleteSlot('${mode}', '${key}', ${index})">🗑️ Supprimer</button>
+                        <button class="btn-preview-mode" style="padding: 6px 12px; font-size: 0.9rem;" onclick="previewSpecificSlot('${mode}', '${key}', ${index})">👁️ Prévisualiser ce créneau</button>
+                    </div>
+                </div>
+            `;
+            return itemEl;
+        }
+
+        function updateSlotProp(mode, key, index, prop, value) {
+            if (mode === 'weekly') weeklySchedules[key][index][prop] = value;
+            else customDateSchedules[key][index][prop] = value;
+        }
+
+        function addWeeklySlot() {
+            if (!weeklySchedules[currentAdminDay]) weeklySchedules[currentAdminDay] = [];
+            weeklySchedules[currentAdminDay].push({ start: "14:00", end: "16:00", title: "Nouvelle Activité", desc: "Description...", picto: "https://img.icons8.com/color/96/clock.png", bg: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1920&q=80" });
+            renderWeeklyForm();
+        }
+
+        function addCustomSlot() {
+            if (!customDateSchedules[selectedCalendarDate]) customDateSchedules[selectedCalendarDate] = [];
+            customDateSchedules[selectedCalendarDate].push({ start: "09:00", end: "12:00", title: "Activité Spéciale", desc: "Description...", picto: "https://img.icons8.com/color/96/sun.png", bg: "https://images.unsplash.com/photo-1530549387789-4c1017266635?auto=format&fit=crop&w=1920&q=80" });
+            renderCustomDateForm();
+        }
+
+        function deleteSlot(mode, key, index) {
+            if (mode === 'weekly') weeklySchedules[key].splice(index, 1), renderWeeklyForm();
+            else customDateSchedules[key].splice(index, 1), renderCustomDateForm();
+        }
+
+        function deleteCustomDateSchedule() {
+            if (customDateSchedules[selectedCalendarDate]) {
+                delete customDateSchedules[selectedCalendarDate];
+                renderCustomDateForm();
+                alert("Planning de la date supprimé.");
+            }
+        }
+
+        function previewSpecificSlot(mode, key, index) {
+            let slot = mode === 'weekly' ? weeklySchedules[key][index] : customDateSchedules[key][index];
+            previewSlotOverride = JSON.parse(JSON.stringify(slot));
+            closeAdmin();
+            document.getElementById('previewBanner').classList.add('active');
+            updateAppForce(previewSlotOverride);
+        }
+
+        function previewCurrentEditedSlot() {
+            let slot = null;
+            if (currentScheduleMode === 'weekly') {
+                slot = (weeklySchedules[currentAdminDay] || [])[0];
+            } else {
+                slot = (customDateSchedules[selectedCalendarDate] || [])[0];
+            }
+            if (!slot) {
+                alert("Veuillez d'abord créer au moins un créneau à prévisualiser.");
+                return;
+            }
+            previewSlotOverride = JSON.parse(JSON.stringify(slot));
+            closeAdmin();
+            document.getElementById('previewBanner').classList.add('active');
+            updateAppForce(previewSlotOverride);
+        }
+
+        function exitPreviewMode() {
+            previewSlotOverride = null;
+            document.getElementById('previewBanner').classList.remove('active');
+            updateApp();
+        }
+
+        function handleImageUpload(event, mode, key, index, type) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    updateSlotProp(mode, key, index, type, e.target.result);
+                    if (mode === 'weekly') renderWeeklyForm();
+                    else renderCustomDateForm();
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function handleSoundUpload(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    currentDesign.customSoundData = e.target.result;
+                    alert("Son téléversé !");
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function playTransitionSound() {
+            if (currentDesign.customSoundData) {
+                new Audio(currentDesign.customSoundData).play().catch(e => console.log(e));
+            } else {
+                try {
+                    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                    const osc = ctx.createOscillator(), gain = ctx.createGain();
+                    osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+                    osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+                    gain.gain.setValueAtTime(0.3, ctx.currentTime);
+                    gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.8);
+                    osc.connect(gain); gain.connect(ctx.destination);
+                    osc.start(); osc.stop(ctx.currentTime + 0.8);
+                } catch(e) {}
+            }
+        }
+
+        function exportDataBackup() {
+            const dataToExport = {
+                weeklySchedules,
+                customDateSchedules,
+                currentDesign
+            };
+            const jsonStr = JSON.stringify(dataToExport, null, 2);
+            const blob = new Blob([jsonStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `sauvegarde_Affiche_dynamique_CLC_V1_${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function importDataBackup(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    try {
+                        const imported = JSON.parse(e.target.result);
+                        if (imported.weeklySchedules) weeklySchedules = imported.weeklySchedules;
+                        if (imported.customDateSchedules) customDateSchedules = imported.customDateSchedules;
+                        if (imported.currentDesign) currentDesign = imported.currentDesign;
+                        saveSchedule();
+                        alert("Sauvegarde importée avec succès !");
+                    } catch(err) {
+                        alert("Erreur lors de l'importation du fichier JSON.");
+                    }
+                };
+                reader.readAsText(file);
+            }
+        }
+
+        function timeToSeconds(t) {
+            if(!t) return 0;
+            const [h, m] = t.split(':').map(Number);
+            return h * 3600 + m * 60;
+        }
+
+        const daysNames = ["Dimanche", "Lundi", "Mardi", "Mercredi", "Jeudi", "Vendredi", "Samedi"];
+        const monthsNames = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
+        function updateAppForce(activity) {
+            const now = new Date();
+            const timeString = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+            setClockText(timeString);
+            document.getElementById('day-indicator').textContent = "MODE PRÉVISUALISATION";
+            document.getElementById('activity-title').textContent = activity.title;
+            document.getElementById('activity-desc').textContent = activity.desc;
+            document.getElementById('activity-picto').src = activity.picto;
+            document.getElementById('time-range').textContent = `${activity.start} ➔ ${activity.end} (Aperçu)`;
+            document.getElementById('time-remaining').textContent = `Prévisualisation active`;
+            document.getElementById('progress-bar').style.width = '65%';
+            if(activity.bg) document.documentElement.style.setProperty('--bg-image', `url('${activity.bg}')`);
+        }
+
+        function updateApp() {
+            if (previewSlotOverride) return;
+
+            const now = new Date();
+            const dayOfWeek = now.getDay(), year = now.getFullYear(), month = String(now.getMonth() + 1).padStart(2, '0'), dayOfMonth = String(now.getDate()).padStart(2, '0');
+            const currentDateFormatted = `${year}-${month}-${dayOfMonth}`;
+            const currentHours = String(now.getHours()).padStart(2, '0'), currentMinutes = String(now.getMinutes()).padStart(2, '0'), currentSeconds = String(now.getSeconds()).padStart(2, '0');
+            
+            const timeString = `${currentHours}:${currentMinutes}:${currentSeconds}`;
+            setClockText(timeString);
+
+            let todaySchedule = (customDateSchedules[currentDateFormatted] && customDateSchedules[currentDateFormatted].length > 0) ? customDateSchedules[currentDateFormatted] : (weeklySchedules[dayOfWeek] || []);
+            document.getElementById('day-indicator').textContent = `${daysNames[dayOfWeek]} ${dayOfMonth} ${monthsNames[now.getMonth()]}`;
+
+            const currentTimeStr = `${currentHours}:${currentMinutes}`;
+            const currentTotalSeconds = now.getHours() * 3600 + now.getMinutes() * 60 + now.getSeconds();
+
+            let currentActivity = todaySchedule.find(item => currentTimeStr >= item.start && currentTimeStr < item.end);
+            if (!currentActivity) {
+                currentActivity = { title: "Centre Fermé", desc: "En dehors des horaires d'ouverture.", picto: "https://img.icons8.com/color/96/clock.png", start: "00:00", end: "23:59", bg: "https://images.unsplash.com/photo-1503676260728-1c00da094a0b?auto=format&fit=crop&w=1920&q=80" };
+            }
+
+            if (previousActivityTitle !== "" && previousActivityTitle !== currentActivity.title && currentDesign.soundEnabled === "true") {
+                playTransitionSound();
+            }
+            previousActivityTitle = currentActivity.title;
+
+            document.getElementById('activity-title').textContent = currentActivity.title;
+            document.getElementById('activity-desc').textContent = currentActivity.desc;
+            document.getElementById('activity-picto').src = currentActivity.picto;
+            document.getElementById('time-range').textContent = `${currentActivity.start} ➔ ${currentActivity.end}`;
+            if(currentActivity.bg) document.documentElement.style.setProperty('--bg-image', `url('${currentActivity.bg}')`);
+
+            const startSec = timeToSeconds(currentActivity.start), endSec = timeToSeconds(currentActivity.end);
+            const totalDur = endSec - startSec, elapsedDur = currentTotalSeconds - startSec;
+            let percentage = totalDur > 0 ? Math.min(Math.max((elapsedDur / totalDur) * 100, 0), 100) : 0;
+            document.getElementById('progress-bar').style.width = `${percentage}%`;
+
+            const remMin = Math.ceil((endSec - currentTotalSeconds) / 60);
+            document.getElementById('time-remaining').textContent = remMin > 1 ? `Il reste environ ${remMin} min` : (remMin === 1 ? `Moins d'une minute !` : `Changement imminent !`);
+        }
+
+        function openAdmin() {
+            applyDesign();
+            switchAdminDay(1);
+            document.getElementById('adminModal').classList.add('active');
+        }
+
+        function closeAdmin() {
+            document.getElementById('adminModal').classList.remove('active');
+        }
+
+        function switchAdminDay(dayIndex, evt) {
+            currentAdminDay = dayIndex;
+            document.querySelectorAll('.day-btn').forEach(btn => btn.classList.remove('active'));
+            if(evt && evt.target) evt.target.classList.add('active');
+            renderWeeklyForm();
+        }
+
+        function saveSchedule() {
+            for (let day in weeklySchedules) weeklySchedules[day].sort((a, b) => timeToSeconds(a.start) - timeToSeconds(b.start));
+            for (let dateKey in customDateSchedules) customDateSchedules[dateKey].sort((a, b) => timeToSeconds(a.start) - timeToSeconds(b.start));
+            localStorage.setItem('centre_weekly_schedules', JSON.stringify(weeklySchedules));
+            localStorage.setItem('centre_custom_date_schedules', JSON.stringify(customDateSchedules));
+            localStorage.setItem('centre_design_clc_v1', JSON.stringify(currentDesign));
+            closeAdmin();
+            updateApp();
+            alert("Configuration enregistrée avec succès !");
+        }
+
+        applyDesign();
+        setInterval(updateApp, 1000);
+        updateApp();
+    </script>
+</body>
+</html>
+
